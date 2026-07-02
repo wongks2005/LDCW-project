@@ -8,6 +8,7 @@
 using namespace std;
 
 // --- Data Structures ---
+
 struct MenuItem {
     int id;
     string name;
@@ -20,270 +21,223 @@ struct CartItem {
 };
 
 // --- Database Simulation (File Handling) ---
+
 class Database {
 public:
-
-static void initializeMenu() {
-    ifstream file("menu.txt");
-    if (!file.is_open()) {
-        ofstream newFile("menu.txt");
-        newFile << "1,Cheeseburger,5.99\n";
-        newFile << "2,Pizza Margherita,8.50\n";
-        newFile << "3,Caesar Salad,4.75\n";
-        newFile << "4,French Fries,2.99\n";
-        newFile << "5,Soda,1.50\n";
-        newFile.close();
-    }
-}
-
-static vector<MenuItem> loadMenu() {
-    vector<MenuItem> menu;
-    ifstream file("menu.txt");
-    string line;
-    while (getline(file, line)) {
-        stringstream ss(line);
-        string idStr, name, priceStr;
-        getline(ss, idStr, ',');
-        getline(ss, name, ',');
-        getline(ss, priceStr, ',');
-        menu.push_back({stoi(idStr), name, stod(priceStr)});
-    }
-    return menu;
-}
-
-static bool registerUser(const string& username, const string& password) {
-    ifstream inFile("users.txt");
-    string u, p;
-    while (inFile >> u >> p) {
-        if (u == username) return false; 
-    }
-    inFile.close();
-
-    ofstream outFile("users.txt", ios::app);
-    outFile << username << " " << password << "\n";
-    return true;
-}
-
-static bool loginUser(const string& username, const string& password) {
-    ifstream file("users.txt");
-    string u, p;
-    while (file >> u >> p) {
-        if (u == username && p == password) return true;
-    }
-    return false;
-}
-
-static void saveOrder(const string& username, double total) {
-    ofstream file("orders.txt", ios::app);
-    file << username << "," << total << "\n";
-}
-
-static void viewOrderHistory(const string& username) {
-    ifstream file("orders.txt");
-    string line, user, total;
-    bool found = false;
-    cout << "\n--- Order History for " << username << " ---\n";
-    while (getline(file, line)) {
-        stringstream ss(line);
-        getline(ss, user, ',');
-        getline(ss, total, ',');
-        if (user == username) {
-            cout << "Order Total: $" << total << "\n";
-            found = true;
+    static void initializeMenu() {
+        ifstream file("menu.txt");
+        if (!file.is_open()) {
+            ofstream newFile("menu.txt");
+            newFile << "1,Cheeseburger,5.99\n";
+            newFile << "2,Pizza Margherita,8.50\n";
+            newFile << "3,Caesar Salad,4.75\n";
+            newFile << "4,French Fries,2.99\n";
+            newFile << "5,Soda,1.50\n";
+            newFile.close();
         }
     }
-    if (!found) cout << "No previous orders found.\n";
-}
 
-// 2. Add this method inside the private section of your FoodApp class
-void checkout() {
-    if (cart.empty()) {
-        cout << "Cart is empty. Cannot checkout.\n";
-        return;
-    }
-    viewCart();
-    cout << "Confirm order? (y/n): ";
-    char confirm;
-    cin >> confirm;
-    if (confirm == 'y' || confirm == 'Y') {
-        double total = 0;
-        for (const auto& c : cart) total += c.item.price * c.quantity;
-        Database::saveOrder(currentUser, total);
-        cart.clear();
-        cout << "Order placed successfully! Thank you.\n";
-    } else {
-        cout << "Checkout cancelled.\n";
-    }
-}
-
-static void saveOrder(const string& username, double total) {
-    ofstream file("orders.txt", ios::app);
-    file << username << "," << total << "\n";
-}
-
-static void viewOrderHistory(const string& username) {
-    ifstream file("orders.txt");
-    string line, user, total;
-    bool found = false;
-    cout << "\n--- Order History for " << username << " ---\n";
-    while (getline(file, line)) {
-        stringstream ss(line);
-        getline(ss, user, ',');
-        getline(ss, total, ',');
-        if (user == username) {
-            cout << "Order Total: $" << total << "\n";
-            found = true;
+    static vector<MenuItem> loadMenu() {
+        vector<MenuItem> menu;
+        ifstream file("menu.txt");
+        string line;
+        while (getline(file, line)) {
+            stringstream ss(line);
+            string idStr, name, priceStr;
+            getline(ss, idStr, ',');
+            getline(ss, name, ',');
+            getline(ss, priceStr, ',');
+            menu.push_back({stoi(idStr), name, stod(priceStr)});
         }
+        return menu;
     }
-    if (!found) cout << "No previous orders found.\n";
-}
 
+    static bool registerUser(const string& username, const string& password) {
+        ifstream inFile("users.txt");
+        string u, p;
+        while (inFile >> u >> p) {
+            if (u == username) return false; // User exists
+        }
+        inFile.close();
 
+        ofstream outFile("users.txt", ios::app);
+        // Note: In a production environment, passwords must be securely hashed before storage.
+        outFile << username << " " << password << "\n";
+        return true;
+    }
+
+    static bool loginUser(const string& username, const string& password) {
+        ifstream file("users.txt");
+        string u, p;
+        while (file >> u >> p) {
+            if (u == username && p == password) return true;
+        }
+        return false;
+    }
+
+    static void saveOrder(const string& username, double total) {
+        ofstream file("orders.txt", ios::app);
+        file << username << "," << total << "\n";
+    }
+
+    static void viewOrderHistory(const string& username) {
+        ifstream file("orders.txt");
+        string line, user, total;
+        bool found = false;
+        cout << "\n--- Order History for " << username << " ---\n";
+        while (getline(file, line)) {
+            stringstream ss(line);
+            getline(ss, user, ',');
+            getline(ss, total, ',');
+            if (user == username) {
+                cout << "Order Total: $" << total << "\n";
+                found = true;
+            }
+        }
+        if (!found) cout << "No previous orders found.\n";
+    }
 };
 
 // --- Application Logic ---
+
 class FoodApp {
 private:
     string currentUser;
     vector<MenuItem> menu;
     vector<CartItem> cart;
 
-void displayMenu() {
-    cout << "\n--- Menu ---\n";
-    for (const auto& item : menu) {
-        cout << item.id << ". " << left << setw(20) << item.name 
-             << "$" << fixed << setprecision(2) << item.price << "\n";
+    void displayMenu() {
+        cout << "\n--- Menu ---\n";
+        for (const auto& item : menu) {
+            cout << item.id << ". " << left << setw(20) << item.name 
+                 << "$" << fixed << setprecision(2) << item.price << "\n";
+        }
     }
-}
 
-void addToCart() {
-    displayMenu();
-    int id, qty;
-    cout << "Enter Item ID to add: ";
-    cin >> id;
-    cout << "Enter Quantity: ";
-    cin >> qty;
+    void addToCart() {
+        displayMenu();
+        int id, qty;
+        cout << "Enter Item ID to add: ";
+        cin >> id;
+        cout << "Enter Quantity: ";
+        cin >> qty;
 
-    for (const auto& item : menu) {
-        if (item.id == id) {
-            cart.push_back({item, qty});
-            cout << qty << "x " << item.name << " added to cart.\n";
+        for (const auto& item : menu) {
+            if (item.id == id) {
+                cart.push_back({item, qty});
+                cout << qty << "x " << item.name << " added to cart.\n";
+                return;
+            }
+        }
+        cout << "Invalid Item ID.\n";
+    }
+
+    void viewCart() {
+        if (cart.empty()) {
+            cout << "\nYour cart is empty.\n";
             return;
         }
-    }
-    cout << "Invalid Item ID.\n";
-}
-
-void viewCart() {
-    if (cart.empty()) {
-        cout << "\nYour cart is empty.\n";
-        return;
-    }
-    cout << "\n--- Your Cart ---\n";
-    double total = 0;
-    for (const auto& cItem : cart) {
-        double cost = cItem.item.price * cItem.quantity;
-        total += cost;
-        cout << cItem.quantity << "x " << left << setw(18) << cItem.item.name 
-             << "$" << fixed << setprecision(2) << cost << "\n";
-    }
-    cout << "--------------------------\n";
-    cout << "Total: $" << total << "\n";
-}
-void checkout() {
-    if (cart.empty()) {
-        cout << "Cart is empty. Cannot checkout.\n";
-        return;
-    }
-    viewCart();
-    cout << "Confirm order? (y/n): ";
-    char confirm;
-    cin >> confirm;
-    if (confirm == 'y' || confirm == 'Y') {
+        cout << "\n--- Your Cart ---\n";
         double total = 0;
-        for (const auto& c : cart) total += c.item.price * c.quantity;
-        Database::saveOrder(currentUser, total);
-        cart.clear();
-        cout << "Order placed successfully! Thank you.\n";
-    } else {
-        cout << "Checkout cancelled.\n";
-    }
-}
-
-void userMenu() {
-    int choice;
-    do {
-        cout << "\n--- Welcome, " << currentUser << " ---\n";
-        cout << "1. View Menu & Add to Cart\n";
-        cout << "2. View Cart\n";
-        cout << "3. Checkout\n";
-        cout << "4. View Order History\n";
-        cout << "5. Logout\n";
-        cout << "Choice: ";
-        cin >> choice;
-
-        switch (choice) {
-            case 1: addToCart(); break;
-            case 2: viewCart(); break;
-            case 3: checkout(); break;
-            case 4: Database::viewOrderHistory(currentUser); break;
-            case 5: cout << "Logging out...\n"; currentUser = ""; break;
-            default: cout << "Invalid choice.\n";
+        for (const auto& cItem : cart) {
+            double cost = cItem.item.price * cItem.quantity;
+            total += cost;
+            cout << cItem.quantity << "x " << left << setw(18) << cItem.item.name 
+                 << "$" << fixed << setprecision(2) << cost << "\n";
         }
-    } while (choice != 5);
-}
+        cout << "--------------------------\n";
+        cout << "Total: $" << total << "\n";
+    }
 
+    void checkout() {
+        if (cart.empty()) {
+            cout << "Cart is empty. Cannot checkout.\n";
+            return;
+        }
+        viewCart();
+        cout << "Confirm order? (y/n): ";
+        char confirm;
+        cin >> confirm;
+        if (confirm == 'y' || confirm == 'Y') {
+            double total = 0;
+            for (const auto& c : cart) total += c.item.price * c.quantity;
+            Database::saveOrder(currentUser, total);
+            cart.clear();
+            cout << "Order placed successfully! Thank you.\n";
+        } else {
+            cout << "Checkout cancelled.\n";
+        }
+    }
 
+    void userMenu() {
+        int choice;
+        do {
+            cout << "\n--- Welcome, " << currentUser << " ---\n";
+            cout << "1. View Menu & Add to Cart\n";
+            cout << "2. View Cart\n";
+            cout << "3. Checkout\n";
+            cout << "4. View Order History\n";
+            cout << "5. Logout\n";
+            cout << "Choice: ";
+            cin >> choice;
 
+            switch (choice) {
+                case 1: addToCart(); break;
+                case 2: viewCart(); break;
+                case 3: checkout(); break;
+                case 4: Database::viewOrderHistory(currentUser); break;
+                case 5: cout << "Logging out...\n"; currentUser = ""; break;
+                default: cout << "Invalid choice.\n";
+            }
+        } while (choice != 5);
+    }
 
 public:
-FoodApp() {
-    Database::initializeMenu();
-    menu = Database::loadMenu();
-}
+    FoodApp() {
+        Database::initializeMenu();
+        menu = Database::loadMenu();
+    }
 
-void run() {
-    int choice;
-    string user, pass;
-    do {
-        cout << "\n=== Food Ordering App ===\n";
-        cout << "1. Login\n";
-        cout << "2. Register\n";
-        cout << "3. Exit\n";
-        cout << "Choice: ";
-        cin >> choice;
+    void run() {
+        int choice;
+        string user, pass;
+        do {
+            cout << "\n=== Food Ordering App ===\n";
+            cout << "1. Login\n";
+            cout << "2. Register\n";
+            cout << "3. Exit\n";
+            cout << "Choice: ";
+            cin >> choice;
 
-        switch (choice) {
-            case 1:
-                cout << "Username: "; cin >> user;
-                cout << "Password: "; cin >> pass;
-                if (Database::loginUser(user, pass)) {
-                    currentUser = user;
-                    userMenu();
-                } else {
-                    cout << "Invalid credentials.\n";
-                }
-                break;
-            case 2:
-                cout << "New Username: "; cin >> user;
-                cout << "New Password: "; cin >> pass;
-                if (Database::registerUser(user, pass)) {
-                    cout << "Registration successful! You can now log in.\n";
-                } else {
-                    cout << "Username already exists.\n";
-                }
-                break;
-            case 3:
-                cout << "Exiting app. Goodbye!\n";
-                break;
-            default:
-                cout << "Invalid choice.\n";
-        }
-    } while (choice != 3);
-}
-
+            switch (choice) {
+                case 1:
+                    cout << "Username: "; cin >> user;
+                    cout << "Password: "; cin >> pass;
+                    if (Database::loginUser(user, pass)) {
+                        currentUser = user;
+                        userMenu();
+                    } else {
+                        cout << "Invalid credentials.\n";
+                    }
+                    break;
+                case 2:
+                    cout << "New Username: "; cin >> user;
+                    cout << "New Password: "; cin >> pass;
+                    if (Database::registerUser(user, pass)) {
+                        cout << "Registration successful! You can now log in.\n";
+                    } else {
+                        cout << "Username already exists.\n";
+                    }
+                    break;
+                case 3:
+                    cout << "Exiting app. Goodbye!\n";
+                    break;
+                default:
+                    cout << "Invalid choice.\n";
+            }
+        } while (choice != 3);
+    }
 };
-
 
 int main() {
     FoodApp app;
