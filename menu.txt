@@ -1,0 +1,10 @@
+1,Cheeseburger,5.99
+2,Pizza Margherita,8.50
+3,Caesar Salad,4.75
+4,French Fries,2.99
+5,Soda,1.50
+6,Chicken Wings,7.25
+7,Chocolate Cake,4.50
+8,Iced Tea,2.00
+9,Veggie Burger,6.50
+10,Onion Rings,3.25
