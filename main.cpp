@@ -209,11 +209,84 @@ void checkout() {
         cout << "Checkout cancelled.\n";
     }
 }
+
+void userMenu() {
+    int choice;
+    do {
+        cout << "\n--- Welcome, " << currentUser << " ---\n";
+        cout << "1. View Menu & Add to Cart\n";
+        cout << "2. View Cart\n";
+        cout << "3. Checkout\n";
+        cout << "4. View Order History\n";
+        cout << "5. Logout\n";
+        cout << "Choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: addToCart(); break;
+            case 2: viewCart(); break;
+            case 3: checkout(); break;
+            case 4: Database::viewOrderHistory(currentUser); break;
+            case 5: cout << "Logging out...\n"; currentUser = ""; break;
+            default: cout << "Invalid choice.\n";
+        }
+    } while (choice != 5);
+}
+
+
+
+
 public:
-    
+FoodApp() {
+    Database::initializeMenu();
+    menu = Database::loadMenu();
+}
+
+void run() {
+    int choice;
+    string user, pass;
+    do {
+        cout << "\n=== Food Ordering App ===\n";
+        cout << "1. Login\n";
+        cout << "2. Register\n";
+        cout << "3. Exit\n";
+        cout << "Choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1:
+                cout << "Username: "; cin >> user;
+                cout << "Password: "; cin >> pass;
+                if (Database::loginUser(user, pass)) {
+                    currentUser = user;
+                    userMenu();
+                } else {
+                    cout << "Invalid credentials.\n";
+                }
+                break;
+            case 2:
+                cout << "New Username: "; cin >> user;
+                cout << "New Password: "; cin >> pass;
+                if (Database::registerUser(user, pass)) {
+                    cout << "Registration successful! You can now log in.\n";
+                } else {
+                    cout << "Username already exists.\n";
+                }
+                break;
+            case 3:
+                cout << "Exiting app. Goodbye!\n";
+                break;
+            default:
+                cout << "Invalid choice.\n";
+        }
+    } while (choice != 3);
+}
 
 };
 
+
 int main() {
+    FoodApp app;
+    app.run();
     return 0;
 }
