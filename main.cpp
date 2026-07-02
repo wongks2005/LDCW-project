@@ -1,4 +1,28 @@
-// Add these methods inside your Database class
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <iomanip>
+#include <sstream>
+
+using namespace std;
+
+// --- Data Structures ---
+struct MenuItem {
+    int id;
+    string name;
+    double price;
+};
+
+struct CartItem {
+    MenuItem item;
+    int quantity;
+};
+
+// --- Database Simulation (File Handling) ---
+class Database {
+public:
+    // Add these methods inside your Database class
 
 static void initializeMenu() {
     ifstream file("menu.txt");
@@ -48,4 +72,20 @@ static bool loginUser(const string& username, const string& password) {
         if (u == username && p == password) return true;
     }
     return false;
+}
+};
+
+// --- Application Logic ---
+class FoodApp {
+private:
+    string currentUser;
+    vector<MenuItem> menu;
+    vector<CartItem> cart;
+
+public:
+    // Methods will be implemented in Stages 3-5
+};
+
+int main() {
+    return 0;
 }
