@@ -72,6 +72,49 @@ static bool loginUser(const string& username, const string& password) {
     }
     return false;
 }
+// 1. Add these methods inside your Database class
+static void saveOrder(const string& username, double total) {
+    ofstream file("orders.txt", ios::app);
+    file << username << "," << total << "\n";
+}
+
+static void viewOrderHistory(const string& username) {
+    ifstream file("orders.txt");
+    string line, user, total;
+    bool found = false;
+    cout << "\n--- Order History for " << username << " ---\n";
+    while (getline(file, line)) {
+        stringstream ss(line);
+        getline(ss, user, ',');
+        getline(ss, total, ',');
+        if (user == username) {
+            cout << "Order Total: $" << total << "\n";
+            found = true;
+        }
+    }
+    if (!found) cout << "No previous orders found.\n";
+}
+
+// 2. Add this method inside the private section of your FoodApp class
+void checkout() {
+    if (cart.empty()) {
+        cout << "Cart is empty. Cannot checkout.\n";
+        return;
+    }
+    viewCart();
+    cout << "Confirm order? (y/n): ";
+    char confirm;
+    cin >> confirm;
+    if (confirm == 'y' || confirm == 'Y') {
+        double total = 0;
+        for (const auto& c : cart) total += c.item.price * c.quantity;
+        Database::saveOrder(currentUser, total);
+        cart.clear();
+        cout << "Order placed successfully! Thank you.\n";
+    } else {
+        cout << "Checkout cancelled.\n";
+    }
+}
 };
 
 // --- Application Logic ---
