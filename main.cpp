@@ -22,7 +22,6 @@ struct CartItem {
 // --- Database Simulation (File Handling) ---
 class Database {
 public:
-    // Add these methods inside your Database class
 
 static void initializeMenu() {
     ifstream file("menu.txt");
@@ -82,8 +81,51 @@ private:
     vector<MenuItem> menu;
     vector<CartItem> cart;
 
+void displayMenu() {
+    cout << "\n--- Menu ---\n";
+    for (const auto& item : menu) {
+        cout << item.id << ". " << left << setw(20) << item.name 
+             << "$" << fixed << setprecision(2) << item.price << "\n";
+    }
+}
+
+void addToCart() {
+    displayMenu();
+    int id, qty;
+    cout << "Enter Item ID to add: ";
+    cin >> id;
+    cout << "Enter Quantity: ";
+    cin >> qty;
+
+    for (const auto& item : menu) {
+        if (item.id == id) {
+            cart.push_back({item, qty});
+            cout << qty << "x " << item.name << " added to cart.\n";
+            return;
+        }
+    }
+    cout << "Invalid Item ID.\n";
+}
+
+void viewCart() {
+    if (cart.empty()) {
+        cout << "\nYour cart is empty.\n";
+        return;
+    }
+    cout << "\n--- Your Cart ---\n";
+    double total = 0;
+    for (const auto& cItem : cart) {
+        double cost = cItem.item.price * cItem.quantity;
+        total += cost;
+        cout << cItem.quantity << "x " << left << setw(18) << cItem.item.name 
+             << "$" << fixed << setprecision(2) << cost << "\n";
+    }
+    cout << "--------------------------\n";
+    cout << "Total: $" << total << "\n";
+}
 public:
-    // Methods will be implemented in Stages 3-5
+    
+
 };
 
 int main() {
