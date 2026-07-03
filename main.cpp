@@ -4,14 +4,37 @@
 #include <vector>
 #include <iomanip>
 #include <sstream>
-#include <cstdlib>
 
 using namespace std;
 
-// --- Helper Function ---
+// --- Helper Functions ---
 
+
+void clearScreen() {
+    cout << "\033[2J\033[1;1H";
+}
+
+
+void pauseScreen() {
+    cout << endl << "Press Enter to continue...";
+    string dummy;
+    getline(cin, dummy);
+}
+
+
+int getIntegerInput() {
+    string input;
+    getline(cin, input);
+    stringstream ss(input);
+    int value;
+    if (ss >> value) {
+        return value;
+    }
+    return -1; 
+}
 
 // --- Data Structures ---
+
 struct MenuItem {
     int id;
     string name;
@@ -24,6 +47,7 @@ struct CartItem {
 };
 
 // --- Database Simulation (File Handling) ---
+
 class Database {
 public:
     static void initializeMenu() {
@@ -55,6 +79,8 @@ public:
     }
 
     static bool registerUser(const string& username, const string& password) {
+        if (username.empty() || password.empty()) return false;
+        
         ifstream inFile("users.txt");
         string u, p;
         while (inFile >> u >> p) {
@@ -76,7 +102,6 @@ public:
         return false;
     }
 
-    // Updated to save items and quantities alongside the total price
     static void saveOrder(const string& username, double total, const vector<CartItem>& currentCart) {
         ofstream file("orders.txt", ios::app);
         file << username << "," << total << ",";
@@ -84,17 +109,16 @@ public:
             file << currentCart[i].item.name << ":" << currentCart[i].quantity;
             if (i < currentCart.size() - 1) file << "|";
         }
-        file << "\n";
+        file << endl;
     }
 
-    // Updated to parse and display individual items from the saved order string
     static void viewOrderHistory(const string& username) {
         ifstream file("orders.txt");
         string line, user, total, itemsStr;
         bool found = false;
         
-      
-        cout << "\n--- Order History for " << username << " ---\n";
+        clearScreen();
+        cout << endl << "--- Order History for " << username << " ---" << endl;
         
         while (getline(file, line)) {
             stringstream ss(line);
@@ -103,8 +127,8 @@ public:
             getline(ss, itemsStr, ','); 
 
             if (user == username) {
-                cout << "Order Total: $" << total << "\n";
-                cout << "Items Ordered:\n";
+                cout << "Order Total: $" << total << endl;
+                cout << "Items Ordered:" << endl;
                 
                 stringstream ssItems(itemsStr);
                 string singleItem;
@@ -113,19 +137,20 @@ public:
                     if (colonPos != string::npos) {
                         string name = singleItem.substr(0, colonPos);
                         string qty = singleItem.substr(colonPos + 1);
-                        cout << "  - " << qty << "x " << name << "\n";
+                        cout << "  - " << qty << "x " << name << endl;
                     }
                 }
-                cout << "--------------------------\n";
+                cout << "--------------------------" << endl;
                 found = true;
             }
         }
-        if (!found) cout << "No previous orders found.\n";
-   
+        if (!found) cout << "No previous orders found." << endl;
+        pauseScreen();
     }
 };
 
 // --- Application Logic ---
+
 class FoodApp {
 private:
     string currentUser;
@@ -133,105 +158,116 @@ private:
     vector<CartItem> cart;
 
     void displayMenu() {
-  
-        cout << "\n--- Menu ---\n";
+        clearScreen();
+        cout << endl << "--- Menu ---" << endl;
         for (const auto& item : menu) {
             cout << item.id << ". " << left << setw(20) << item.name 
-                 << "$" << fixed << setprecision(2) << item.price << "\n";
+                 << "$" << fixed << setprecision(2) << item.price << endl;
         }
     }
 
     void addToCart() {
         displayMenu();
-        int id, qty;
-        cout << "\nEnter Item ID to add (or 0 to cancel): ";
-        cin >> id;
+        cout << endl << "Enter Item ID to add (or 0 to cancel): ";
+        int id = getIntegerInput();
+        
         if (id == 0) return;
+        if (id == -1) {
+            cout << "Invalid input. Operational ID must be a number." << endl;
+            pauseScreen();
+            return;
+        }
         
         cout << "Enter Quantity: ";
-        cin >> qty;
+        int qty = getIntegerInput();
+
+        if (qty <= 0) {
+            cout << "Invalid quantity entered." << endl;
+            pauseScreen();
+            return;
+        }
 
         for (const auto& item : menu) {
             if (item.id == id) {
                 cart.push_back({item, qty});
-                cout << qty << "x " << item.name << " added to cart.\n";
-      
+                cout << qty << "x " << item.name << " added to cart." << endl;
+                pauseScreen();
                 return;
             }
         }
-        cout << "Invalid Item ID.\n";
-
+        cout << "Invalid Item ID." << endl;
+        pauseScreen();
     }
 
     void viewCart() {
         if (cart.empty()) {
-            cout << "\nYour cart is empty.\n";
+            cout << endl << "Your cart is empty." << endl;
             return;
         }
-        cout << "\n--- Your Cart ---\n";
+        cout << endl << "--- Your Cart ---" << endl;
         double total = 0;
         for (const auto& cItem : cart) {
             double cost = cItem.item.price * cItem.quantity;
             total += cost;
             cout << cItem.quantity << "x " << left << setw(18) << cItem.item.name 
-                 << "$" << fixed << setprecision(2) << cost << "\n";
+                 << "$" << fixed << setprecision(2) << cost << endl;
         }
-        cout << "--------------------------\n";
-        cout << "Total: $" << total << "\n";
+        cout << "--------------------------" << endl;
+        cout << "Total: $" << total << endl;
     }
 
     void checkout() {
         if (cart.empty()) {
-            cout << "Cart is empty. Cannot checkout.\n";
-
+            cout << "Cart is empty. Cannot checkout." << endl;
+            pauseScreen();
             return;
         }
         
-        cout << "\nConfirm order? (y/n): ";
-        char confirm;
-        cin >> confirm;
-        if (confirm == 'y' || confirm == 'Y') {
+        cout << endl << "Confirm order? (y/n): ";
+        string confirm;
+        getline(cin, confirm);
+        
+        if (confirm == "y" || confirm == "Y") {
             double total = 0;
             for (const auto& c : cart) total += c.item.price * c.quantity;
             
-            // Pass the cart to save individual items in history
             Database::saveOrder(currentUser, total, cart);
             cart.clear();
-            cout << "Order placed successfully! Thank you.\n";
+            cout << "Order placed successfully! Thank you." << endl;
         } else {
-            cout << "Checkout cancelled.\n";
+            cout << "Checkout cancelled." << endl;
         }
-
+        pauseScreen();
     }
 
-    // New dedicated Cart Page feature
     void cartPage() {
         int choice;
         do {
-
+            clearScreen();
             viewCart();
-            cout << "\n--- Cart Menu ---\n";
-            cout << "1. Checkout\n";
-            cout << "2. Clear Cart\n";
-            cout << "3. Go Back to Main Menu\n";
+            cout << endl << "--- Cart Menu ---" << endl;
+            cout << "1. Checkout" << endl;
+            cout << "2. Clear Cart" << endl;
+            cout << "3. Go Back to Main Menu" << endl;
             cout << "Choice: ";
-            cin >> choice;
+            
+            choice = getIntegerInput();
 
             switch (choice) {
                 case 1: 
                     checkout(); 
-                    if (cart.empty()) choice = 3; // Exit cart page if checkout was successful
+                    if (cart.empty()) choice = 3; 
                     break;
                 case 2: 
                     cart.clear(); 
-                    cout << "Cart cleared.\n"; 
-         
+                    cout << "Cart cleared." << endl; 
+                    pauseScreen();
                     break;
                 case 3: 
                     break;
                 default: 
-                    cout << "Invalid choice.\n"; 
-       
+                    cout << "Invalid choice." << endl; 
+                    pauseScreen();
             }
         } while (choice != 3);
     }
@@ -239,21 +275,22 @@ private:
     void userMenu() {
         int choice;
         do {
-
-            cout << "\n--- Welcome, " << currentUser << " ---\n";
-            cout << "1. View Menu & Add to Cart\n";
-            cout << "2. Open Cart Page\n";
-            cout << "3. View Order History\n";
-            cout << "4. Logout\n";
+            clearScreen();
+            cout << endl << "--- Welcome, " << currentUser << " ---" << endl;
+            cout << "1. View Menu & Add to Cart" << endl;
+            cout << "2. Open Cart Page" << endl;
+            cout << "3. View Order History" << endl;
+            cout << "4. Logout" << endl;
             cout << "Choice: ";
-            cin >> choice;
+            
+            choice = getIntegerInput();
 
             switch (choice) {
                 case 1: addToCart(); break;
                 case 2: cartPage(); break;
                 case 3: Database::viewOrderHistory(currentUser); break;
-                case 4: cout << "Logging out...\n"; currentUser = "";  break;
-                default: cout << "Invalid choice.\n"; 
+                case 4: cout << "Logging out..." << endl; currentUser = ""; pauseScreen(); break;
+                default: cout << "Invalid choice." << endl; pauseScreen();
             }
         } while (choice != 4);
     }
@@ -268,42 +305,45 @@ public:
         int choice;
         string user, pass;
         do {
-            
-            cout << "\n=== Food Ordering App ===\n";
-            cout << "1. Login\n";
-            cout << "2. Register\n";
-            cout << "3. Exit\n";
+            clearScreen();
+            cout << endl << "=== Food Ordering App ===" << endl;
+            cout << "1. Login" << endl;
+            cout << "2. Register" << endl;
+            cout << "3. Exit" << endl;
             cout << "Choice: ";
-            cin >> choice;
+            
+            choice = getIntegerInput();
 
             switch (choice) {
                 case 1:
-                    cout << "Username: "; cin >> user;
-                    cout << "Password: "; cin >> pass;
+                    cout << "Username: "; getline(cin, user);
+                    cout << "Password: "; getline(cin, pass);
+                    
                     if (Database::loginUser(user, pass)) {
                         currentUser = user;
                         userMenu();
                     } else {
-                        cout << "Invalid credentials.\n";
-                       
+                        cout << "Invalid credentials." << endl;
+                        pauseScreen();
                     }
                     break;
                 case 2:
-                    cout << "New Username: "; cin >> user;
-                    cout << "New Password: "; cin >> pass;
+                    cout << "New Username: "; getline(cin, user);
+                    cout << "New Password: "; getline(cin, pass);
+                    
                     if (Database::registerUser(user, pass)) {
-                        cout << "Registration successful! You can now log in.\n";
+                        cout << "Registration successful! You can now log in." << endl;
                     } else {
-                        cout << "Username already exists.\n";
+                        cout << "Username invalid or already exists." << endl;
                     }
-                 
+                    pauseScreen();
                     break;
                 case 3:
-                    cout << "Exiting app. Goodbye!\n";
+                    cout << "Exiting app. Goodbye!" << endl;
                     break;
                 default:
-                    cout << "Invalid choice.\n";
-       
+                    cout << "Invalid choice." << endl;
+                    pauseScreen();
             }
         } while (choice != 3);
     }
