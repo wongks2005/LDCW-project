@@ -4,45 +4,156 @@
  * 
  * Part of LDCW6123 Group Project
  * 
- * This program simulates a food delivery ordering system
- * with restaurant selection, menu browsing, and order calculation
- * 
- * VERSION 3.0 - CLEAN OUTPUT (NO SPECIAL CHARACTERS)
+ * Combined version with:
+ * - User authentication (from teammates)
+ * - Restaurant selection & ordering (from you)
+ * - Shopping cart & checkout
+ * - Order history
  */
 
 #include <iostream>
+#include <fstream>
 #include <string>
-#include <iomanip>
-#include <cctype>
 #include <vector>
+#include <iomanip>
+#include <sstream>
+#include <cstdlib>
 #include <limits>
+#include <cctype>
 
 using namespace std;
 
-// Function Prototypes
-void displayMainMenu();
-void displayRestaurants();
-void selectRestaurant(int &choice, string &restaurantName);
-void displayMenu(int restaurantChoice, vector<string> &items, vector<double> &prices);
-void selectItems(vector<string> &selectedItems, vector<double> &selectedPrices, int restaurantChoice);
-double calculateDeliveryFee(int distance);
-double applyPromo(string promoCode, double subtotal);
-void displayOrderSummary(string customerName, string restaurantName, 
-                         vector<string> &selectedItems, vector<double> &selectedPrices,
-                         double subtotal, double deliveryFee, double discount, double total);
-void displayThankYou();
-void clearScreen();
+// ============ DATA STRUCTURES ============
 
-// ============ INPUT VALIDATION FUNCTIONS ============
+struct MenuItem {
+    int id;
+    string name;
+    double price;
+};
+
+struct CartItem {
+    MenuItem item;
+    int quantity;
+};
+
+struct Restaurant {
+    int id;
+    string name;
+    string cuisine;
+    vector<MenuItem> menu;
+};
+
+// ============ DATABASE CLASS ============
+
+class Database {
+public:
+    static void initializeMenu() {
+        ifstream file("menu.txt");
+        if (!file.is_open()) {
+            ofstream newFile("menu.txt");
+            newFile << "1,Cheeseburger,5.99\n";
+            newFile << "2,Pizza Margherita,8.50\n";
+            newFile << "3,Caesar Salad,4.75\n";
+            newFile << "4,French Fries,2.99\n";
+            newFile << "5,Soda,1.50\n";
+            newFile.close();
+        }
+    }
+
+    static vector<MenuItem> loadMenu() {
+        vector<MenuItem> menu;
+        ifstream file("menu.txt");
+        string line;
+        while (getline(file, line)) {
+            stringstream ss(line);
+            string idStr, name, priceStr;
+            getline(ss, idStr, ',');
+            getline(ss, name, ',');
+            getline(ss, priceStr, ',');
+            menu.push_back({stoi(idStr), name, stod(priceStr)});
+        }
+        return menu;
+    }
+
+    static bool registerUser(const string& username, const string& password) {
+        ifstream inFile("users.txt");
+        string u, p;
+        while (inFile >> u >> p) {
+            if (u == username) return false;
+        }
+        inFile.close();
+
+        ofstream outFile("users.txt", ios::app);
+        outFile << username << " " << password << "\n";
+        return true;
+    }
+
+    static bool loginUser(const string& username, const string& password) {
+        ifstream file("users.txt");
+        string u, p;
+        while (file >> u >> p) {
+            if (u == username && p == password) return true;
+        }
+        return false;
+    }
+
+    static void saveOrder(const string& username, double total, const vector<CartItem>& currentCart) {
+        ofstream file("orders.txt", ios::app);
+        file << username << "," << total << ",";
+        for (size_t i = 0; i < currentCart.size(); ++i) {
+            file << currentCart[i].item.name << ":" << currentCart[i].quantity;
+            if (i < currentCart.size() - 1) file << "|";
+        }
+        file << "\n";
+    }
+
+    static void viewOrderHistory(const string& username) {
+        ifstream file("orders.txt");
+        string line, user, total, itemsStr;
+        bool found = false;
+
+        cout << "\n===========================================" << endl;
+        cout << "     ORDER HISTORY FOR " << username << endl;
+        cout << "===========================================" << endl;
+
+        while (getline(file, line)) {
+            stringstream ss(line);
+            getline(ss, user, ',');
+            getline(ss, total, ',');
+            getline(ss, itemsStr, ',');
+
+            if (user == username) {
+                cout << "Total: RM " << total << endl;
+                cout << "Items Ordered:" << endl;
+
+                stringstream ssItems(itemsStr);
+                string singleItem;
+                while (getline(ssItems, singleItem, '|')) {
+                    size_t colonPos = singleItem.find(':');
+                    if (colonPos != string::npos) {
+                        string name = singleItem.substr(0, colonPos);
+                        string qty = singleItem.substr(colonPos + 1);
+                        cout << "  - " << qty << "x " << name << endl;
+                    }
+                }
+                cout << "-------------------------------------------" << endl;
+                found = true;
+            }
+        }
+        if (!found) cout << "No previous orders found." << endl;
+    }
+};
+
+// ============ INPUT VALIDATION ============
 
 int getValidatedInt(string prompt, int minVal, int maxVal) {
     int input;
     bool valid = false;
-    
+
     do {
         cout << prompt;
         cin >> input;
-        
+
         if (cin.fail()) {
             cin.clear();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
@@ -55,98 +166,20 @@ int getValidatedInt(string prompt, int minVal, int maxVal) {
             valid = true;
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
         }
-        
-    } while (!valid);
-    
-    return input;
-}
 
-int getValidatedIntNoRange(string prompt) {
-    int input;
-    bool valid = false;
-    
-    do {
-        cout << prompt;
-        cin >> input;
-        
-        if (cin.fail()) {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "[ERROR] Please enter a valid NUMBER!" << endl;
-        }
-        else {
-            valid = true;
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        }
-        
     } while (!valid);
-    
-    return input;
-}
 
-double getValidatedDouble(string prompt, double minVal, double maxVal) {
-    double input;
-    bool valid = false;
-    
-    do {
-        cout << prompt;
-        cin >> input;
-        
-        if (cin.fail()) {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "[ERROR] Please enter a valid NUMBER between " << minVal << " and " << maxVal << "!" << endl;
-        }
-        else if (input < minVal || input > maxVal) {
-            cout << "[ERROR] Number must be between " << minVal << " and " << maxVal << "!" << endl;
-        }
-        else {
-            valid = true;
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        }
-        
-    } while (!valid);
-    
-    return input;
-}
-
-string getValidatedString(string prompt, bool allowEmpty = false) {
-    string input;
-    bool valid = false;
-    
-    do {
-        cout << prompt;
-        getline(cin, input);
-        
-        size_t start = input.find_first_not_of(" \t");
-        if (start != string::npos) {
-            input = input.substr(start);
-        }
-        size_t end = input.find_last_not_of(" \t");
-        if (end != string::npos) {
-            input = input.substr(0, end + 1);
-        }
-        
-        if (!allowEmpty && input.empty()) {
-            cout << "[ERROR] Input cannot be empty! Please try again." << endl;
-        }
-        else {
-            valid = true;
-        }
-        
-    } while (!valid);
-    
     return input;
 }
 
 char getValidatedChar(string prompt) {
     char input;
     bool valid = false;
-    
+
     do {
         cout << prompt;
         cin >> input;
-        
+
         if (cin.fail()) {
             cin.clear();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
@@ -162,377 +195,275 @@ char getValidatedChar(string prompt) {
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
             }
         }
-        
+
     } while (!valid);
-    
+
     return input;
 }
 
-string getValidatedPromo(string prompt) {
-    string input;
-    bool valid = false;
-    
-    do {
-        cout << prompt;
-        cin >> input;
-        
-        if (cin.fail()) {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "[ERROR] Invalid input! Please try again." << endl;
-        }
-        else {
-            for (char &c : input) {
-                c = toupper(c);
-            }
-            
-            if (input != "NONE" && input != "FOOD10" && input != "FOOD20" && input != "FREEDEL") {
-                cout << "[NOTE] '" << input << "' is not a valid promo code." << endl;
-                cout << "Valid codes: FOOD10, FOOD20, FREEDEL, or NONE" << endl;
-                cout << "Do you want to continue with NONE? (Y/N): ";
-                char confirm = getValidatedChar("");
-                if (confirm == 'Y') {
-                    input = "NONE";
-                    valid = true;
-                }
-            }
-            else {
-                valid = true;
-            }
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        }
-        
-    } while (!valid);
-    
-    return input;
-}
+// ============ FOOD DELIVERY SYSTEM (Your Code) ============
 
-// ============ MAIN FUNCTION ============
-int main() {
-    int restaurantChoice = 0;
-    string restaurantName = "";
-    vector<string> selectedItems;
-    vector<double> selectedPrices;
-    int deliveryDistance = 0;
-    string promoCode = "";
-    double discount = 0.0;
-    string customerName = "";
-    bool exitProgram = false;
-    
-    cout << "===========================================" << endl;
-    cout << "      FOOD DELIVERY ORDER SYSTEM          " << endl;
-    cout << "         (Inspired by Foodpanda)          " << endl;
-    cout << "===========================================" << endl << endl;
-    
-    cout << "Welcome to the Food Delivery Order System!" << endl;
-    
-    customerName = getValidatedString("Please enter your name: ", false);
-    cout << endl << "Hello, " << customerName << "! Let's get started." << endl;
-    
-    do {
-        cout << endl << "===========================================" << endl;
-        cout << "          MAIN MENU                       " << endl;
+class FoodDeliverySystem {
+private:
+    vector<Restaurant> restaurants;
+    vector<CartItem> cart;
+    string currentUser;
+
+    void initializeRestaurants() {
+        restaurants = {
+            {1, "McDonald's", "Fast Food", {
+                {1, "Big Mac", 18.50},
+                {2, "McChicken", 12.00},
+                {3, "Fries", 9.00},
+                {4, "McFlurry", 8.50},
+                {5, "Coca-Cola", 5.00}
+            }},
+            {2, "KFC", "Fried Chicken", {
+                {1, "Original Recipe Chicken", 22.00},
+                {2, "Zinger Burger", 15.00},
+                {3, "Coleslaw", 6.00},
+                {4, "Mashed Potatoes", 7.00},
+                {5, "Pepsi", 5.00}
+            }},
+            {3, "Pizza Hut", "Pizzas", {
+                {1, "Margherita Pizza", 25.00},
+                {2, "Pepperoni Pizza", 28.00},
+                {3, "Hawaiian Pizza", 27.00},
+                {4, "Garlic Bread", 10.00},
+                {5, "Soft Drink", 5.00}
+            }},
+            {4, "Starbucks", "Coffee & Drinks", {
+                {1, "Caramel Latte", 16.00},
+                {2, "Cappuccino", 14.00},
+                {3, "Green Tea", 12.00},
+                {4, "Croissant", 8.00},
+                {5, "Muffin", 7.00}
+            }},
+            {5, "Local Noodle House", "Asian Cuisine", {
+                {1, "Chicken Noodle Soup", 15.00},
+                {2, "Beef Noodle", 18.00},
+                {3, "Fried Rice", 13.00},
+                {4, "Spring Rolls", 10.00},
+                {5, "Thai Tea", 6.00}
+            }}
+        };
+    }
+
+    void displayRestaurants() {
+        cout << "\n===========================================" << endl;
+        cout << "        AVAILABLE RESTAURANTS              " << endl;
         cout << "===========================================" << endl;
-        cout << "1. Place a New Order" << endl;
-        cout << "2. Exit System" << endl;
-        cout << "===========================================" << endl;
-        
-        int mainChoice = getValidatedInt("Enter your choice (1-2): ", 1, 2);
-        
-        if (mainChoice == 2) {
-            exitProgram = true;
-            break;
+        for (const auto& r : restaurants) {
+            cout << r.id << ". " << r.name << " - " << r.cuisine << endl;
         }
-        
-        bool orderComplete = false;
-        
+        cout << "===========================================" << endl;
+    }
+
+    void displayMenu(const Restaurant& restaurant) {
+        cout << "\n=== " << restaurant.name << " MENU ===" << endl;
+        for (const auto& item : restaurant.menu) {
+            cout << item.id << ". " << left << setw(20) << item.name
+                 << "RM " << fixed << setprecision(2) << item.price << endl;
+        }
+        cout << "=============================" << endl;
+    }
+
+    void addToCart() {
+        displayRestaurants();
+        int restChoice = getValidatedInt("Select a restaurant (1-5): ", 1, 5);
+
+        Restaurant& selected = restaurants[restChoice - 1];
+        displayMenu(selected);
+
+        int itemChoice = getValidatedInt("Select item (0 to cancel): ", 0, 5);
+        if (itemChoice == 0) return;
+
+        int quantity = getValidatedInt("Enter quantity (1-99): ", 1, 99);
+
+        for (const auto& item : selected.menu) {
+            if (item.id == itemChoice) {
+                cart.push_back({item, quantity});
+                cout << "Added " << quantity << "x " << item.name << " to cart!" << endl;
+                return;
+            }
+        }
+    }
+
+    void viewCart() {
+        if (cart.empty()) {
+            cout << "\n[INFO] Your cart is empty." << endl;
+            return;
+        }
+
+        cout << "\n===========================================" << endl;
+        cout << "              YOUR CART                    " << endl;
+        cout << "===========================================" << endl;
+        double total = 0;
+        for (const auto& cItem : cart) {
+            double cost = cItem.item.price * cItem.quantity;
+            total += cost;
+            cout << cItem.quantity << "x " << left << setw(18) << cItem.item.name
+                 << "RM " << fixed << setprecision(2) << cost << endl;
+        }
+        cout << "-------------------------------------------" << endl;
+        cout << "TOTAL: RM " << fixed << setprecision(2) << total << endl;
+        cout << "===========================================" << endl;
+    }
+
+    void checkout() {
+        if (cart.empty()) {
+            cout << "[ERROR] Cart is empty. Cannot checkout." << endl;
+            return;
+        }
+
+        viewCart();
+        char confirm = getValidatedChar("Confirm order? (Y/N): ");
+
+        if (confirm == 'Y') {
+            double total = 0;
+            for (const auto& c : cart) total += c.item.price * c.quantity;
+
+            Database::saveOrder(currentUser, total, cart);
+            cart.clear();
+            cout << "\n[SUCCESS] Order placed successfully! Thank you!" << endl;
+        } else {
+            cout << "Checkout cancelled." << endl;
+        }
+    }
+
+    void cartPage() {
+        int choice;
         do {
-            selectedItems.clear();
-            selectedPrices.clear();
-            discount = 0.0;
-            
-            displayRestaurants();
-            selectRestaurant(restaurantChoice, restaurantName);
-            
-            displayMenu(restaurantChoice, selectedItems, selectedPrices);
-            selectItems(selectedItems, selectedPrices, restaurantChoice);
-            
-            if (selectedItems.empty()) {
-                cout << endl << "[ERROR] No items were selected!" << endl;
-                char tryAgain = getValidatedChar("Would you like to try again? (Y/N): ");
-                if (tryAgain == 'Y') {
-                    continue;
-                } else {
+            viewCart();
+            cout << "\n--- Cart Menu ---" << endl;
+            cout << "1. Checkout" << endl;
+            cout << "2. Clear Cart" << endl;
+            cout << "3. Go Back" << endl;
+            choice = getValidatedInt("Choice: ", 1, 3);
+
+            switch (choice) {
+                case 1:
+                    checkout();
+                    if (cart.empty()) choice = 3;
                     break;
-                }
+                case 2:
+                    cart.clear();
+                    cout << "Cart cleared." << endl;
+                    break;
+                case 3:
+                    break;
             }
-            
-            deliveryDistance = getValidatedInt("Enter delivery distance in kilometers (1-20): ", 1, 20);
-            promoCode = getValidatedPromo("Enter promo code (or type 'NONE' to skip): ");
-            
-            double subtotal = 0.0;
-            for (double price : selectedPrices) {
-                subtotal += price;
-            }
-            
-            double deliveryFee = calculateDeliveryFee(deliveryDistance);
-            
-            if (promoCode == "FREEDEL") {
-                deliveryFee = 0.0;
-                cout << endl << "[PROMO] Free delivery applied!" << endl;
-                discount = 0.0;
-            } else {
-                discount = applyPromo(promoCode, subtotal);
-            }
-            
-            double total = subtotal + deliveryFee - discount;
-            
-            displayOrderSummary(customerName, restaurantName, selectedItems, selectedPrices, 
-                               subtotal, deliveryFee, discount, total);
-            
-            cout << endl << "===========================================" << endl;
-            cout << "What would you like to do?" << endl;
-            cout << "1. Place another order (different restaurant)" << endl;
-            cout << "2. Go back to Main Menu" << endl;
-            cout << "3. Exit System" << endl;
+        } while (choice != 3);
+    }
+
+public:
+    FoodDeliverySystem(string user) : currentUser(user) {
+        initializeRestaurants();
+    }
+
+    void showMenu() {
+        int choice;
+        do {
+            cout << "\n===========================================" << endl;
+            cout << "        FOOD DELIVERY SYSTEM              " << endl;
             cout << "===========================================" << endl;
-            
-            int nextAction = getValidatedInt("Enter your choice (1-3): ", 1, 3);
-            
-            if (nextAction == 1) {
-                cout << endl << "Starting a new order..." << endl;
-                continue;
-            } else if (nextAction == 2) {
-                cout << endl << "Returning to main menu..." << endl;
-                orderComplete = true;
-                break;
-            } else if (nextAction == 3) {
-                exitProgram = true;
-                orderComplete = true;
-                break;
+            cout << "1. Browse Restaurants & Order" << endl;
+            cout << "2. View Cart" << endl;
+            cout << "3. View Order History" << endl;
+            cout << "4. Logout" << endl;
+            cout << "===========================================" << endl;
+
+            choice = getValidatedInt("Choice: ", 1, 4);
+
+            switch (choice) {
+                case 1:
+                    addToCart();
+                    break;
+                case 2:
+                    cartPage();
+                    break;
+                case 3:
+                    Database::viewOrderHistory(currentUser);
+                    break;
+                case 4:
+                    cout << "Logging out..." << endl;
+                    break;
             }
-            
-        } while (!orderComplete && !exitProgram);
-        
-    } while (!exitProgram);
-    
-    displayThankYou();
-    
+        } while (choice != 4);
+    }
+};
+
+// ============ MAIN APPLICATION ============
+
+class FoodApp {
+private:
+    string currentUser;
+
+public:
+    void run() {
+        int choice;
+        string user, pass;
+
+        do {
+            cout << "\n===========================================" << endl;
+            cout << "          FOOD ORDERING APP                " << endl;
+            cout << "         (Inspired by Foodpanda)          " << endl;
+            cout << "===========================================" << endl;
+            cout << "1. Login" << endl;
+            cout << "2. Register" << endl;
+            cout << "3. Exit" << endl;
+            cout << "===========================================" << endl;
+
+            choice = getValidatedInt("Choice: ", 1, 3);
+
+            switch (choice) {
+                case 1:
+                    cout << "Username: ";
+                    cin >> user;
+                    cout << "Password: ";
+                    cin >> pass;
+
+                    if (Database::loginUser(user, pass)) {
+                        currentUser = user;
+                        cout << "\n[SUCCESS] Welcome back, " << currentUser << "!" << endl;
+                        FoodDeliverySystem delivery(currentUser);
+                        delivery.showMenu();
+                    } else {
+                        cout << "[ERROR] Invalid credentials." << endl;
+                    }
+                    break;
+
+                case 2:
+                    cout << "New Username: ";
+                    cin >> user;
+                    cout << "New Password: ";
+                    cin >> pass;
+
+                    if (Database::registerUser(user, pass)) {
+                        cout << "[SUCCESS] Registration successful! You can now log in." << endl;
+                    } else {
+                        cout << "[ERROR] Username already exists." << endl;
+                    }
+                    break;
+
+                case 3:
+                    cout << "\nThank you for using Food Ordering App!" << endl;
+                    cout << "Your order will be delivered soon! 🚀" << endl;
+                    break;
+            }
+        } while (choice != 3);
+    }
+};
+
+// ============ MAIN ============
+
+int main() {
+    // Initialize database files
+    Database::initializeMenu();
+
+    // Run the app
+    FoodApp app;
+    app.run();
+
     return 0;
-}
-
-// ============ FUNCTION IMPLEMENTATIONS ============
-
-void displayRestaurants() {
-    cout << endl << "=== AVAILABLE RESTAURANTS ===" << endl;
-    cout << "1. McDonald's - Fast Food" << endl;
-    cout << "2. KFC - Fried Chicken" << endl;
-    cout << "3. Pizza Hut - Pizzas" << endl;
-    cout << "4. Starbucks - Coffee & Drinks" << endl;
-    cout << "5. Local Noodle House - Asian Cuisine" << endl;
-    cout << "6. Subway - Sandwiches" << endl;
-    cout << "7. Sushi King - Japanese" << endl;
-    cout << "8. Burger King - Burgers" << endl;
-    cout << "=============================" << endl;
-}
-
-void selectRestaurant(int &choice, string &restaurantName) {
-    choice = getValidatedInt("Select a restaurant (1-8): ", 1, 8);
-    
-    switch (choice) {
-        case 1: restaurantName = "McDonald's"; break;
-        case 2: restaurantName = "KFC"; break;
-        case 3: restaurantName = "Pizza Hut"; break;
-        case 4: restaurantName = "Starbucks"; break;
-        case 5: restaurantName = "Local Noodle House"; break;
-        case 6: restaurantName = "Subway"; break;
-        case 7: restaurantName = "Sushi King"; break;
-        case 8: restaurantName = "Burger King"; break;
-        default: restaurantName = "Unknown"; break;
-    }
-    
-    cout << endl << "You selected: " << restaurantName << "!" << endl;
-}
-
-void displayMenu(int restaurantChoice, vector<string> &items, vector<double> &prices) {
-    cout << endl << "=== MENU ===" << endl;
-    
-    items.clear();
-    prices.clear();
-    
-    switch (restaurantChoice) {
-        case 1:
-            items = {"Big Mac", "McChicken", "Fries", "McFlurry", "Coca-Cola"};
-            prices = {18.50, 12.00, 9.00, 8.50, 5.00};
-            break;
-        case 2:
-            items = {"Original Recipe Chicken", "Zinger Burger", "Coleslaw", "Mashed Potatoes", "Pepsi"};
-            prices = {22.00, 15.00, 6.00, 7.00, 5.00};
-            break;
-        case 3:
-            items = {"Margherita Pizza", "Pepperoni Pizza", "Hawaiian Pizza", "Garlic Bread", "Soft Drink"};
-            prices = {25.00, 28.00, 27.00, 10.00, 5.00};
-            break;
-        case 4:
-            items = {"Caramel Latte", "Cappuccino", "Green Tea", "Croissant", "Muffin"};
-            prices = {16.00, 14.00, 12.00, 8.00, 7.00};
-            break;
-        case 5:
-            items = {"Chicken Noodle Soup", "Beef Noodle", "Fried Rice", "Spring Rolls", "Thai Tea"};
-            prices = {15.00, 18.00, 13.00, 10.00, 6.00};
-            break;
-        case 6:
-            items = {"Italian BMT", "Turkey Breast", "Veggie Delite", "Cookies", "Soft Drink"};
-            prices = {18.00, 16.00, 12.00, 5.00, 5.00};
-            break;
-        case 7:
-            items = {"California Roll", "Sashimi Set", "Tempura", "Miso Soup", "Green Tea"};
-            prices = {20.00, 30.00, 18.00, 8.00, 5.00};
-            break;
-        case 8:
-            items = {"Whopper", "Chicken Burger", "Onion Rings", "Ice Cream", "Coca-Cola"};
-            prices = {20.00, 14.00, 8.00, 6.00, 5.00};
-            break;
-        default:
-            items = {"No items available"};
-            prices = {0.00};
-            break;
-    }
-    
-    for (size_t i = 0; i < items.size(); i++) {
-        cout << i + 1 << ". " << items[i] << " - RM " << fixed << setprecision(2) << prices[i] << endl;
-    }
-}
-
-void selectItems(vector<string> &selectedItems, vector<double> &selectedPrices, int restaurantChoice) {
-    int itemChoice;
-    int quantity;
-    char addMore;
-    
-    cout << endl << "Select items to order (or 0 to finish):" << endl;
-    
-    do {
-        itemChoice = getValidatedInt("Enter item number (0 to finish): ", 0, 5);
-        
-        if (itemChoice == 0) break;
-        
-        vector<string> tempItems;
-        vector<double> tempPrices;
-        displayMenu(restaurantChoice, tempItems, tempPrices);
-        
-        string itemName = tempItems[itemChoice - 1];
-        double itemPrice = tempPrices[itemChoice - 1];
-        
-        quantity = getValidatedInt("Enter quantity (1-99): ", 1, 99);
-        
-        for (int i = 0; i < quantity; i++) {
-            selectedItems.push_back(itemName);
-            selectedPrices.push_back(itemPrice);
-        }
-        
-        cout << "Added " << quantity << "x " << itemName << " to your order." << endl;
-        addMore = getValidatedChar("Add more items? (Y/N): ");
-        
-    } while (addMore == 'Y');
-}
-
-double calculateDeliveryFee(int distance) {
-    double fee = 0.0;
-    
-    if (distance <= 3) {
-        fee = 3.00;
-    } else if (distance <= 5) {
-        fee = 5.00;
-    } else if (distance <= 8) {
-        fee = 8.00;
-    } else if (distance <= 12) {
-        fee = 12.00;
-    } else {
-        fee = 15.00;
-    }
-    
-    return fee;
-}
-
-double applyPromo(string promoCode, double subtotal) {
-    double discount = 0.0;
-    
-    if (promoCode == "FOOD10") {
-        discount = subtotal * 0.10;
-        cout << endl << "[PROMO] 10% discount applied! - RM " << fixed << setprecision(2) << discount << endl;
-    } else if (promoCode == "FOOD20") {
-        discount = subtotal * 0.20;
-        cout << endl << "[PROMO] 20% discount applied! - RM " << fixed << setprecision(2) << discount << endl;
-    } else if (promoCode == "NONE") {
-        cout << endl << "[INFO] No promo code applied." << endl;
-        discount = 0.0;
-    }
-    
-    return discount;
-}
-
-void displayOrderSummary(string customerName, string restaurantName, 
-                         vector<string> &selectedItems, vector<double> &selectedPrices,
-                         double subtotal, double deliveryFee, double discount, double total) {
-    
-    cout << endl << "===========================================" << endl;
-    cout << "           ORDER SUMMARY                    " << endl;
-    cout << "===========================================" << endl;
-    cout << "Customer: " << customerName << endl;
-    cout << "Restaurant: " << restaurantName << endl;
-    cout << endl << "--- Order Details ---" << endl;
-    
-    vector<string> uniqueItems;
-    vector<int> quantities;
-    vector<double> itemPrices;
-    
-    for (size_t i = 0; i < selectedItems.size(); i++) {
-        bool found = false;
-        for (size_t j = 0; j < uniqueItems.size(); j++) {
-            if (uniqueItems[j] == selectedItems[i]) {
-                quantities[j]++;
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            uniqueItems.push_back(selectedItems[i]);
-            quantities.push_back(1);
-            itemPrices.push_back(selectedPrices[i]);
-        }
-    }
-    
-    for (size_t i = 0; i < uniqueItems.size(); i++) {
-        cout << "   " << quantities[i] << "x " << uniqueItems[i] 
-             << " @ RM " << fixed << setprecision(2) << itemPrices[i]
-             << " = RM " << fixed << setprecision(2) << (quantities[i] * itemPrices[i]) << endl;
-    }
-    
-    cout << endl << "--- Payment Summary ---" << endl;
-    cout << "   Subtotal: RM " << fixed << setprecision(2) << subtotal << endl;
-    cout << "   Delivery Fee: RM " << fixed << setprecision(2) << deliveryFee << endl;
-    
-    if (discount > 0) {
-        cout << "   Discount: -RM " << fixed << setprecision(2) << discount << endl;
-    }
-    
-    cout << "-------------------------------------------" << endl;
-    cout << "   TOTAL: RM " << fixed << setprecision(2) << total << endl;
-    cout << "===========================================" << endl;
-}
-
-void displayThankYou() {
-    cout << endl << "===========================================" << endl;
-    cout << "    Thank you for using Food Delivery System!" << endl;
-    cout << "    Your order will be delivered soon!" << endl;
-    cout << "    (Inspired by Foodpanda)" << endl;
-    cout << "===========================================" << endl;
-}
-
-void clearScreen() {
-    #ifdef _WIN32
-        system("cls");
-    #else
-        system("clear");
-    #endif
 }
