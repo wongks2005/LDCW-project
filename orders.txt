@@ -4,3 +4,4 @@ janedoe,5.98,French Fries:2
 testuser,4.50,Soda:3
 teva,34,Pizza Margherita:4
 admin,17.97,Cheeseburger:3
+admin,36,McChicken:3

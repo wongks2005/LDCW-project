@@ -407,7 +407,6 @@ public:
         do {
             cout << "\n===========================================" << endl;
             cout << "          FOOD ORDERING APP                " << endl;
-            cout << "         (Inspired by Foodpanda)          " << endl;
             cout << "===========================================" << endl;
             cout << "1. Login" << endl;
             cout << "2. Register" << endl;
