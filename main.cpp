@@ -4,26 +4,11 @@
 #include <vector>
 #include <iomanip>
 #include <sstream>
-#include <cstdlib>
 
 using namespace std;
 
-// --- Helper Function ---
-void clearScreen() {
-#ifdef _WIN32
-    system("cls");
-#else
-    system("clear");
-#endif
-}
-
-void pauseScreen() {
-    cout << "\nPress Enter to continue...";
-    cin.ignore(10000, '\n');
-    cin.get();
-}
-
 // --- Data Structures ---
+
 struct MenuItem {
     int id;
     string name;
@@ -36,6 +21,7 @@ struct CartItem {
 };
 
 // --- Database Simulation (File Handling) ---
+
 class Database {
 public:
     static void initializeMenu() {
@@ -70,11 +56,12 @@ public:
         ifstream inFile("users.txt");
         string u, p;
         while (inFile >> u >> p) {
-            if (u == username) return false; 
+            if (u == username) return false; // User exists
         }
         inFile.close();
 
         ofstream outFile("users.txt", ios::app);
+        // Note: In a production environment, passwords must be securely hashed before storage.
         outFile << username << " " << password << "\n";
         return true;
     }
@@ -88,56 +75,31 @@ public:
         return false;
     }
 
-    // Updated to save items and quantities alongside the total price
-    static void saveOrder(const string& username, double total, const vector<CartItem>& currentCart) {
+    static void saveOrder(const string& username, double total) {
         ofstream file("orders.txt", ios::app);
-        file << username << "," << total << ",";
-        for (size_t i = 0; i < currentCart.size(); ++i) {
-            file << currentCart[i].item.name << ":" << currentCart[i].quantity;
-            if (i < currentCart.size() - 1) file << "|";
-        }
-        file << "\n";
+        file << username << "," << total << "\n";
     }
 
-    // Updated to parse and display individual items from the saved order string
     static void viewOrderHistory(const string& username) {
         ifstream file("orders.txt");
-        string line, user, total, itemsStr;
+        string line, user, total;
         bool found = false;
-        
-        clearScreen();
         cout << "\n--- Order History for " << username << " ---\n";
-        
         while (getline(file, line)) {
             stringstream ss(line);
             getline(ss, user, ',');
             getline(ss, total, ',');
-            getline(ss, itemsStr, ','); 
-
             if (user == username) {
                 cout << "Order Total: $" << total << "\n";
-                cout << "Items Ordered:\n";
-                
-                stringstream ssItems(itemsStr);
-                string singleItem;
-                while (getline(ssItems, singleItem, '|')) {
-                    size_t colonPos = singleItem.find(':');
-                    if (colonPos != string::npos) {
-                        string name = singleItem.substr(0, colonPos);
-                        string qty = singleItem.substr(colonPos + 1);
-                        cout << "  - " << qty << "x " << name << "\n";
-                    }
-                }
-                cout << "--------------------------\n";
                 found = true;
             }
         }
         if (!found) cout << "No previous orders found.\n";
-        pauseScreen();
     }
 };
 
 // --- Application Logic ---
+
 class FoodApp {
 private:
     string currentUser;
@@ -145,7 +107,6 @@ private:
     vector<CartItem> cart;
 
     void displayMenu() {
-        clearScreen();
         cout << "\n--- Menu ---\n";
         for (const auto& item : menu) {
             cout << item.id << ". " << left << setw(20) << item.name 
@@ -156,10 +117,8 @@ private:
     void addToCart() {
         displayMenu();
         int id, qty;
-        cout << "\nEnter Item ID to add (or 0 to cancel): ";
+        cout << "Enter Item ID to add: ";
         cin >> id;
-        if (id == 0) return;
-        
         cout << "Enter Quantity: ";
         cin >> qty;
 
@@ -167,12 +126,10 @@ private:
             if (item.id == id) {
                 cart.push_back({item, qty});
                 cout << qty << "x " << item.name << " added to cart.\n";
-                pauseScreen();
                 return;
             }
         }
         cout << "Invalid Item ID.\n";
-        pauseScreen();
     }
 
     void viewCart() {
@@ -195,79 +152,44 @@ private:
     void checkout() {
         if (cart.empty()) {
             cout << "Cart is empty. Cannot checkout.\n";
-            pauseScreen();
             return;
         }
-        
-        cout << "\nConfirm order? (y/n): ";
+        viewCart();
+        cout << "Confirm order? (y/n): ";
         char confirm;
         cin >> confirm;
         if (confirm == 'y' || confirm == 'Y') {
             double total = 0;
             for (const auto& c : cart) total += c.item.price * c.quantity;
-            
-            // Pass the cart to save individual items in history
-            Database::saveOrder(currentUser, total, cart);
+            Database::saveOrder(currentUser, total);
             cart.clear();
             cout << "Order placed successfully! Thank you.\n";
         } else {
             cout << "Checkout cancelled.\n";
         }
-        pauseScreen();
-    }
-
-    // New dedicated Cart Page feature
-    void cartPage() {
-        int choice;
-        do {
-            clearScreen();
-            viewCart();
-            cout << "\n--- Cart Menu ---\n";
-            cout << "1. Checkout\n";
-            cout << "2. Clear Cart\n";
-            cout << "3. Go Back to Main Menu\n";
-            cout << "Choice: ";
-            cin >> choice;
-
-            switch (choice) {
-                case 1: 
-                    checkout(); 
-                    if (cart.empty()) choice = 3; // Exit cart page if checkout was successful
-                    break;
-                case 2: 
-                    cart.clear(); 
-                    cout << "Cart cleared.\n"; 
-                    pauseScreen();
-                    break;
-                case 3: 
-                    break;
-                default: 
-                    cout << "Invalid choice.\n"; 
-                    pauseScreen();
-            }
-        } while (choice != 3);
     }
 
     void userMenu() {
         int choice;
         do {
-            clearScreen();
             cout << "\n--- Welcome, " << currentUser << " ---\n";
             cout << "1. View Menu & Add to Cart\n";
-            cout << "2. Open Cart Page\n";
-            cout << "3. View Order History\n";
-            cout << "4. Logout\n";
+            cout << "2. View Cart\n";
+            cout << "3. Checkout\n";
+            cout << "4. View Order History\n";
+            cout << "5. Logout\n";
             cout << "Choice: ";
             cin >> choice;
 
             switch (choice) {
                 case 1: addToCart(); break;
-                case 2: cartPage(); break;
-                case 3: Database::viewOrderHistory(currentUser); break;
-                case 4: cout << "Logging out...\n"; currentUser = ""; pauseScreen(); break;
-                default: cout << "Invalid choice.\n"; pauseScreen();
+                case 2: viewCart(); break;
+                case 3: checkout(); break;
+                case 4: Database::viewOrderHistory(currentUser); break;
+                case 5: cout << "Logging out...\n"; currentUser = ""; break;
+                default: cout << "Invalid choice.\n";
             }
-        } while (choice != 4);
+        } while (choice != 5);
     }
 
 public:
@@ -280,7 +202,6 @@ public:
         int choice;
         string user, pass;
         do {
-            clearScreen();
             cout << "\n=== Food Ordering App ===\n";
             cout << "1. Login\n";
             cout << "2. Register\n";
@@ -297,7 +218,6 @@ public:
                         userMenu();
                     } else {
                         cout << "Invalid credentials.\n";
-                        pauseScreen();
                     }
                     break;
                 case 2:
@@ -308,14 +228,12 @@ public:
                     } else {
                         cout << "Username already exists.\n";
                     }
-                    pauseScreen();
                     break;
                 case 3:
                     cout << "Exiting app. Goodbye!\n";
                     break;
                 default:
                     cout << "Invalid choice.\n";
-                    pauseScreen();
             }
         } while (choice != 3);
     }
