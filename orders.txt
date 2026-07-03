@@ -5,3 +5,5 @@ testuser,4.50,Soda:3
 teva,34,Pizza Margherita:4
 admin,17.97,Cheeseburger:3
 admin,36,McChicken:3
+admin,36,McChicken:3
+admin,18.5,Big Mac:1
