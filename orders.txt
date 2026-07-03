@@ -1,8 +1,6 @@
-johndoe,14.49
-admin,5.99
-janedoe,20.25
-johndoe,4.49
-testuser,11.75
-admin,8.50
-janedoe,6.50
+admin,11.98,Cheeseburger:2
+johndoe,18.99,Pizza Margherita:1|Cheeseburger:1|Caesar Salad:1
+janedoe,5.98,French Fries:2
+testuser,4.50,Soda:3
 
+teva,34,Pizza Margherita:4
