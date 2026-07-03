@@ -2,4 +2,3 @@ admin,11.98,Cheeseburger:2
 johndoe,18.99,Pizza Margherita:1|Cheeseburger:1|Caesar Salad:1
 janedoe,5.98,French Fries:2
 testuser,4.50,Soda:3
-
