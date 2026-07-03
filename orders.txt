@@ -5,3 +5,5 @@ johndoe,4.49
 testuser,11.75
 admin,8.50
 janedoe,6.50
+wks123,11.98
+wks123,25.5
