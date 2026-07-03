@@ -281,7 +281,7 @@ public:
         string user, pass;
         do {
             clearScreen();
-            cout << "\n=== Food Ordering App ===\n";
+            cout << "=== Food Ordering App ===\n";
             cout << "1. Login\n";
             cout << "2. Register\n";
             cout << "3. Exit\n";
