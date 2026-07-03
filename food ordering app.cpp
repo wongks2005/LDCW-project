@@ -1,13 +1,16 @@
 /**
  * Food Delivery Order System
  * Inspired by Foodpanda - Food Delivery Platform
- * * Part of LDCW6123 Group Project
- * * This is the finalized version with additional features:
- * - Relational Multi-Restaurant Architecture: Introduces nested data models allowing multiple distinct restaurants, each with unique IDs, names, cuisines, and standalone menus.
- * - Structured Flat-File Database: Parses an advanced comma-separated schema (RestaurantID, Name, Cuisine, ItemID, ItemName, Price) to dynamically organize vendor groupings.
- * - Robust Stream Input Validation: Enhances system reliability through strict input loops checking for cin.fail() states and clearing stream limits to safely trap invalid entries.
- * - Unidirectional Cart Layout: Restructures the checkout and cart panels into a single-pass, loop-free execution path that immediately returns control downstream.
- * - Localized Currency Standards: Reconfigured to match regional formatting layouts utilizing Ringgit Malaysia (RM) standards.
+ * This code was made for LDCW6123 Group Project
+ * 
+ * This is the finalized version with several features:
+ * - Persistent Flat-File Database Initialization: Automatically sets up a local relational CSV file populated with sample restaurants and structured menu items if it does not already exist[cite: 7, 8].
+ * - Dynamic Restaurant Data Parsing: Loads restaurant menus line-by-line using string streams to assemble complex runtime data vectors dynamically[cite: 17, 18, 22].
+ * - User Access Control: Manages credential authentication through dedicated file-backed registration and matching login verification routines[cite: 24, 26, 28].
+ * - Transaction Log and History Tracker: Formats and stores transactional order logs onto external storage, allowing users to recall their individual order histories at any time[cite: 31, 34, 37].
+ * - Fail-Safe Input Validation: Intercepts input stream failures and evaluates logical boundary limits for numeric choices and character choices to eliminate terminal crashes[cite: 46, 48, 52, 55].
+ * - Interactive Menu Browsing and Shopping Cart: Empowers users to browse various cuisines, customize distinct item quantities, compute item totals, and clear or checkout items smoothly[cite: 63, 71, 78, 80, 95].
+ * - Structured Console Interface: Organizes user navigation via layered menus that dynamically refresh using dedicated ANSI screen-clearing utilities[cite: 4, 109, 112].
  */
 #include <iostream>
 #include <fstream>
