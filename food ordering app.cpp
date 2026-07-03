@@ -4,13 +4,13 @@
  * This code was made for LDCW6123 Group Project
  * 
  * This is the finalized version with several features:
- * - Persistent Flat-File Database Initialization: Automatically sets up a local relational CSV file populated with sample restaurants and structured menu items if it does not already exist[cite: 7, 8].
- * - Dynamic Restaurant Data Parsing: Loads restaurant menus line-by-line using string streams to assemble complex runtime data vectors dynamically[cite: 17, 18, 22].
- * - User Access Control: Manages credential authentication through dedicated file-backed registration and matching login verification routines[cite: 24, 26, 28].
- * - Transaction Log and History Tracker: Formats and stores transactional order logs onto external storage, allowing users to recall their individual order histories at any time[cite: 31, 34, 37].
- * - Fail-Safe Input Validation: Intercepts input stream failures and evaluates logical boundary limits for numeric choices and character choices to eliminate terminal crashes[cite: 46, 48, 52, 55].
- * - Interactive Menu Browsing and Shopping Cart: Empowers users to browse various cuisines, customize distinct item quantities, compute item totals, and clear or checkout items smoothly[cite: 63, 71, 78, 80, 95].
- * - Structured Console Interface: Organizes user navigation via layered menus that dynamically refresh using dedicated ANSI screen-clearing utilities[cite: 4, 109, 112].
+ * - Persistent Flat-File Database Initialization: Automatically sets up a local relational CSV file populated with sample restaurants and structured menu items if it does not already exist.
+ * - Dynamic Restaurant Data Parsing: Loads restaurant menus line-by-line using string streams to assemble complex runtime data vectors dynamically.
+ * - User Access Control: Manages credential authentication through dedicated file-backed registration and matching login verification routines.
+ * - Transaction Log and History Tracker: Formats and stores transactional order logs onto external storage, allowing users to recall their individual order histories at any time.
+ * - Fail-Safe Input Validation: Intercepts input stream failures and evaluates logical boundary limits for numeric choices and character choices to eliminate terminal crashes.
+ * - Interactive Menu Browsing and Shopping Cart: Empowers users to browse various cuisines, customize distinct item quantities, compute item totals, and clear or checkout items smoothly.
+ * - Structured Console Interface: Organizes user navigation via layered menus that dynamically refresh using dedicated ANSI screen-clearing utilities.
  */
 #include <iostream>
 #include <fstream>
