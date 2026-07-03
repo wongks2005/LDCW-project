@@ -1,39 +1,27 @@
+/**
+ * Food Delivery Order System
+ * Inspired by Foodpanda - Food Delivery Platform
+ * * Part of LDCW6123 Group Project
+ * * This is the finalized version with additional features:
+ * - Relational Multi-Restaurant Architecture: Introduces nested data models allowing multiple distinct restaurants, each with unique IDs, names, cuisines, and standalone menus.
+ * - Structured Flat-File Database: Parses an advanced comma-separated schema (RestaurantID, Name, Cuisine, ItemID, ItemName, Price) to dynamically organize vendor groupings.
+ * - Robust Stream Input Validation: Enhances system reliability through strict input loops checking for cin.fail() states and clearing stream limits to safely trap invalid entries.
+ * - Unidirectional Cart Layout: Restructures the checkout and cart panels into a single-pass, loop-free execution path that immediately returns control downstream.
+ * - Localized Currency Standards: Reconfigured to match regional formatting layouts utilizing Ringgit Malaysia (RM) standards.
+ */
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
 #include <iomanip>
 #include <sstream>
+#include <cstdlib>
+#include <limits>
+#include <cctype>
 
 using namespace std;
 
-// --- Helper Functions ---
-
-
-void clearScreen() {
-    cout << "\033[2J\033[1;1H";
-}
-
-
-void pauseScreen() {
-    cout << endl << "Press Enter to continue...";
-    string dummy;
-    getline(cin, dummy);
-}
-
-
-int getIntegerInput() {
-    string input;
-    getline(cin, input);
-    stringstream ss(input);
-    int value;
-    if (ss >> value) {
-        return value;
-    }
-    return -1; 
-}
-
-// --- Data Structures ---
+// ============ DATA STRUCTURES ============
 
 struct MenuItem {
     int id;
@@ -46,45 +34,109 @@ struct CartItem {
     int quantity;
 };
 
-// --- Database Simulation (File Handling) ---
+struct Restaurant {
+    int id;
+    string name;
+    string cuisine;
+    vector<MenuItem> menu;
+};
+
+// ============ INTERFACE FLOW HELPERS ============
+
+// Clears the console screen using standard ANSI escape codes
+void clearScreen() {
+    cout << "\033[2J\033[1;1H";
+}
+
+// Pauses the screen until the user presses Enter
+void pauseScreen() {
+    cout << "\nPress Enter to continue...";
+    cin.get();
+}
+
+// ============ DATABASE CLASS ============
 
 class Database {
 public:
+    // Generates a structured relational csv flat-file database
     static void initializeMenu() {
-        ifstream file("menu.txt");
+        ifstream file("menu2.txt");
         if (!file.is_open()) {
-            ofstream newFile("menu.txt");
-            newFile << "1,Cheeseburger,5.99\n";
-            newFile << "2,Pizza Margherita,8.50\n";
-            newFile << "3,Caesar Salad,4.75\n";
-            newFile << "4,French Fries,2.99\n";
-            newFile << "5,Soda,1.50\n";
+            ofstream newFile("menu2.txt");
+            // Format: RestaurantID,RestaurantName,Cuisine,ItemID,ItemName,Price
+            newFile << "1,McDonald's,Fast Food,1,Big Mac,18.50\n";
+            newFile << "1,McDonald's,Fast Food,2,McChicken,12.00\n";
+            newFile << "1,McDonald's,Fast Food,3,Fries,9.00\n";
+            newFile << "1,McDonald's,Fast Food,4,McFlurry,8.50\n";
+            newFile << "1,McDonald's,Fast Food,5,Coca-Cola,5.00\n";
+            newFile << "2,KFC,Fried Chicken,1,Original Recipe Chicken,22.00\n";
+            newFile << "2,KFC,Fried Chicken,2,Zinger Burger,15.00\n";
+            newFile << "2,KFC,Fried Chicken,3,Coleslaw,6.00\n";
+            newFile << "2,KFC,Fried Chicken,4,Mashed Potatoes,7.00\n";
+            newFile << "2,KFC,Fried Chicken,5,Pepsi,5.00\n";
+            newFile << "3,Pizza Hut,Pizzas,1,Margherita Pizza,25.00\n";
+            newFile << "3,Pizza Hut,Pizzas,2,Pepperoni Pizza,28.00\n";
+            newFile << "3,Pizza Hut,Pizzas,3,Hawaiian Pizza,27.00\n";
+            newFile << "3,Pizza Hut,Pizzas,4,Garlic Bread,10.00\n";
+            newFile << "3,Pizza Hut,Pizzas,5,Soft Drink,5.00\n";
+            newFile << "4,Starbucks,Coffee & Drinks,1,Caramel Latte,16.00\n";
+            newFile << "4,Starbucks,Coffee & Drinks,2,Cappuccino,14.00\n";
+            newFile << "4,Starbucks,Coffee & Drinks,3,Green Tea,12.00\n";
+            newFile << "4,Starbucks,Coffee & Drinks,4,Croissant,8.00\n";
+            newFile << "4,Starbucks,Coffee & Drinks,5,Muffin,7.00\n";
+            newFile << "5,Local Noodle House,Asian Cuisine,1,Chicken Noodle Soup,15.00\n";
+            newFile << "5,Local Noodle House,Asian Cuisine,2,Beef Noodle,18.00\n";
+            newFile << "5,Local Noodle House,Asian Cuisine,3,Fried Rice,13.00\n";
+            newFile << "5,Local Noodle House,Asian Cuisine,4,Spring Rolls,10.00\n";
+            newFile << "5,Local Noodle House,Asian Cuisine,5,Thai Tea,6.00\n";
             newFile.close();
         }
     }
 
-    static vector<MenuItem> loadMenu() {
-        vector<MenuItem> menu;
-        ifstream file("menu.txt");
+    // Dynamically builds the objects by parsing the database text file line-by-line
+    static vector<Restaurant> loadRestaurants() {
+        vector<Restaurant> lists;
+        ifstream file("menu2.txt");
         string line;
+
         while (getline(file, line)) {
+            if (line.empty()) continue;
             stringstream ss(line);
-            string idStr, name, priceStr;
-            getline(ss, idStr, ',');
-            getline(ss, name, ',');
+            string rIdStr, rName, cuisine, mIdStr, mName, priceStr;
+
+            getline(ss, rIdStr, ',');
+            getline(ss, rName, ',');
+            getline(ss, cuisine, ',');
+            getline(ss, mIdStr, ',');
+            getline(ss, mName, ',');
             getline(ss, priceStr, ',');
-            menu.push_back({stoi(idStr), name, stod(priceStr)});
+
+            int rId = stoi(rIdStr);
+            int mId = stoi(mIdStr);
+            double price = stod(priceStr);
+
+            bool found = false;
+            for (auto& r : lists) {
+                if (r.id == rId) {
+                    r.menu.push_back({mId, mName, price});
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                Restaurant newRest = {rId, rName, cuisine, {{mId, mName, price}}};
+                lists.push_back(newRest);
+            }
         }
-        return menu;
+        return lists;
     }
 
     static bool registerUser(const string& username, const string& password) {
-        if (username.empty() || password.empty()) return false;
-        
         ifstream inFile("users.txt");
         string u, p;
         while (inFile >> u >> p) {
-            if (u == username) return false; 
+            if (u == username) return false;
         }
         inFile.close();
 
@@ -109,27 +161,29 @@ public:
             file << currentCart[i].item.name << ":" << currentCart[i].quantity;
             if (i < currentCart.size() - 1) file << "|";
         }
-        file << endl;
+        file << "\n";
     }
 
     static void viewOrderHistory(const string& username) {
         ifstream file("orders.txt");
         string line, user, total, itemsStr;
         bool found = false;
-        
+
         clearScreen();
-        cout << endl << "--- Order History for " << username << " ---" << endl;
-        
+        cout << "===========================================" << endl;
+        cout << "     ORDER HISTORY FOR " << username << endl;
+        cout << "===========================================" << endl;
+
         while (getline(file, line)) {
             stringstream ss(line);
             getline(ss, user, ',');
             getline(ss, total, ',');
-            getline(ss, itemsStr, ','); 
+            getline(ss, itemsStr, ',');
 
             if (user == username) {
-                cout << "Order Total: $" << total << endl;
+                cout << "Total: RM " << total << endl;
                 cout << "Items Ordered:" << endl;
-                
+
                 stringstream ssItems(itemsStr);
                 string singleItem;
                 while (getline(ssItems, singleItem, '|')) {
@@ -140,7 +194,7 @@ public:
                         cout << "  - " << qty << "x " << name << endl;
                     }
                 }
-                cout << "--------------------------" << endl;
+                cout << "-------------------------------------------" << endl;
                 found = true;
             }
         }
@@ -149,208 +203,298 @@ public:
     }
 };
 
-// --- Application Logic ---
+// ============ INPUT VALIDATION ============
 
-class FoodApp {
-private:
-    string currentUser;
-    vector<MenuItem> menu;
-    vector<CartItem> cart;
+int getValidatedInt(string prompt, int minVal, int maxVal) {
+    int input;
+    bool valid = false;
 
-    void displayMenu() {
-        clearScreen();
-        cout << endl << "--- Menu ---" << endl;
-        for (const auto& item : menu) {
-            cout << item.id << ". " << left << setw(20) << item.name 
-                 << "$" << fixed << setprecision(2) << item.price << endl;
+    do {
+        cout << prompt;
+        cin >> input;
+
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "[ERROR] Please enter a valid NUMBER between " << minVal << " and " << maxVal << "!" << endl;
         }
+        else if (input < minVal || input > maxVal) {
+            cout << "[ERROR] Number must be between " << minVal << " and " << maxVal << "!" << endl;
+        }
+        else {
+            valid = true;
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+
+    } while (!valid);
+
+    return input;
+}
+
+char getValidatedChar(string prompt) {
+    char input;
+    bool valid = false;
+
+    do {
+        cout << prompt;
+        cin >> input;
+
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "[ERROR] Please enter a SINGLE character!" << endl;
+        }
+        else {
+            input = toupper(input);
+            if (input != 'Y' && input != 'N') {
+                cout << "[ERROR] Please enter 'Y' for Yes or 'N' for No!" << endl;
+            }
+            else {
+                valid = true;
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
+        }
+
+    } while (!valid);
+
+    return input;
+}
+
+// ============ FOOD DELIVERY SYSTEM ============
+
+class FoodDeliverySystem {
+private:
+    vector<Restaurant> restaurants;
+    vector<CartItem> cart;
+    string currentUser;
+
+    void initializeRestaurants() {
+        restaurants = Database::loadRestaurants();
+    }
+
+    void displayRestaurants() {
+        clearScreen();
+        cout << "===========================================" << endl;
+        cout << "        AVAILABLE RESTAURANTS              " << endl;
+        cout << "===========================================" << endl;
+        for (const auto& r : restaurants) {
+            cout << r.id << ". " << r.name << " - " << r.cuisine << endl;
+        }
+        cout << "===========================================" << endl;
+    }
+
+    void displayMenu(const Restaurant& restaurant) {
+        clearScreen();
+        cout << "=== " << restaurant.name << " MENU ===" << endl;
+        for (const auto& item : restaurant.menu) {
+            cout << item.id << ". " << left << setw(20) << item.name
+                 << "RM " << fixed << setprecision(2) << item.price << endl;
+        }
+        cout << "=============================" << endl;
     }
 
     void addToCart() {
-        displayMenu();
-        cout << endl << "Enter Item ID to add (or 0 to cancel): ";
-        int id = getIntegerInput();
-        
-        if (id == 0) return;
-        if (id == -1) {
-            cout << "Invalid input. Operational ID must be a number." << endl;
-            pauseScreen();
-            return;
-        }
-        
-        cout << "Enter Quantity: ";
-        int qty = getIntegerInput();
+        displayRestaurants();
+        int restChoice = getValidatedInt("Select a restaurant (1-5): ", 1, 5);
 
-        if (qty <= 0) {
-            cout << "Invalid quantity entered." << endl;
-            pauseScreen();
-            return;
-        }
+        Restaurant& selected = restaurants[restChoice - 1];
+        displayMenu(selected);
 
-        for (const auto& item : menu) {
-            if (item.id == id) {
-                cart.push_back({item, qty});
-                cout << qty << "x " << item.name << " added to cart." << endl;
+        int itemChoice = getValidatedInt("Select item (0 to cancel): ", 0, 5);
+        if (itemChoice == 0) return;
+
+        int quantity = getValidatedInt("Enter quantity (1-99): ", 1, 99);
+
+        for (const auto& item : selected.menu) {
+            if (item.id == itemChoice) {
+                cart.push_back({item, quantity});
+                cout << "\nAdded " << quantity << "x " << item.name << " to cart!" << endl;
                 pauseScreen();
                 return;
             }
         }
-        cout << "Invalid Item ID." << endl;
-        pauseScreen();
     }
 
     void viewCart() {
+        clearScreen();
         if (cart.empty()) {
-            cout << endl << "Your cart is empty." << endl;
+            cout << "[INFO] Your cart is empty." << endl;
             return;
         }
-        cout << endl << "--- Your Cart ---" << endl;
+
+        cout << "===========================================" << endl;
+        cout << "              YOUR CART                    " << endl;
+        cout << "===========================================" << endl;
         double total = 0;
         for (const auto& cItem : cart) {
             double cost = cItem.item.price * cItem.quantity;
             total += cost;
-            cout << cItem.quantity << "x " << left << setw(18) << cItem.item.name 
-                 << "$" << fixed << setprecision(2) << cost << endl;
+            cout << cItem.quantity << "x " << left << setw(18) << cItem.item.name
+                 << "RM " << fixed << setprecision(2) << cost << endl;
         }
-        cout << "--------------------------" << endl;
-        cout << "Total: $" << total << endl;
+        cout << "-------------------------------------------" << endl;
+        cout << "TOTAL: RM " << fixed << setprecision(2) << total << endl;
+        cout << "===========================================" << endl;
     }
 
     void checkout() {
+        viewCart();
         if (cart.empty()) {
-            cout << "Cart is empty. Cannot checkout." << endl;
             pauseScreen();
             return;
         }
-        
-        cout << endl << "Confirm order? (y/n): ";
-        string confirm;
-        getline(cin, confirm);
-        
-        if (confirm == "y" || confirm == "Y") {
+
+        char confirm = getValidatedChar("Confirm order? (Y/N): ");
+
+        if (confirm == 'Y') {
             double total = 0;
             for (const auto& c : cart) total += c.item.price * c.quantity;
-            
+
             Database::saveOrder(currentUser, total, cart);
             cart.clear();
-            cout << "Order placed successfully! Thank you." << endl;
+            cout << "\n[SUCCESS] Order placed successfully! Thank you!" << endl;
         } else {
             cout << "Checkout cancelled." << endl;
         }
         pauseScreen();
     }
 
-    void cartPage() {
-        int choice;
-        do {
-            clearScreen();
-            viewCart();
-            cout << endl << "--- Cart Menu ---" << endl;
-            cout << "1. Checkout" << endl;
-            cout << "2. Clear Cart" << endl;
-            cout << "3. Go Back to Main Menu" << endl;
-            cout << "Choice: ";
-            
-            choice = getIntegerInput();
-
-            switch (choice) {
-                case 1: 
-                    checkout(); 
-                    if (cart.empty()) choice = 3; 
-                    break;
-                case 2: 
-                    cart.clear(); 
-                    cout << "Cart cleared." << endl; 
-                    pauseScreen();
-                    break;
-                case 3: 
-                    break;
-                default: 
-                    cout << "Invalid choice." << endl; 
-                    pauseScreen();
-            }
-        } while (choice != 3);
+public:
+    FoodDeliverySystem(string user) : currentUser(user) {
+        initializeRestaurants();
     }
 
-    void userMenu() {
+void cartPage() {
+        viewCart();
+        if (cart.empty()) {
+            pauseScreen();
+            return;
+        }
+
+        cout << "\n--- Cart Menu ---" << endl;
+        cout << "1. Checkout" << endl;
+        cout << "2. Clear Cart" << endl;
+        cout << "3. Go Back" << endl;
+        int choice = getValidatedInt("Choice: ", 1, 3);
+
+        switch (choice) {
+            case 1:
+                checkout();
+                break;
+            case 2:
+                cart.clear();
+                cout << "Cart cleared." << endl;
+                pauseScreen();
+                break;
+            case 3:
+                break;
+        }
+    }
+
+    void showMenu() {
         int choice;
         do {
             clearScreen();
-            cout << endl << "--- Welcome, " << currentUser << " ---" << endl;
-            cout << "1. View Menu & Add to Cart" << endl;
-            cout << "2. Open Cart Page" << endl;
+            cout << "===========================================" << endl;
+            cout << "        FOOD DELIVERY SYSTEM               " << endl;
+            cout << "===========================================" << endl;
+            cout << "1. Browse Restaurants & Order" << endl;
+            cout << "2. View Cart" << endl;
             cout << "3. View Order History" << endl;
             cout << "4. Logout" << endl;
-            cout << "Choice: ";
-            
-            choice = getIntegerInput();
+            cout << "===========================================" << endl;
 
-            switch (choice) {
-                case 1: addToCart(); break;
-                case 2: cartPage(); break;
-                case 3: Database::viewOrderHistory(currentUser); break;
-                case 4: cout << "Logging out..." << endl; currentUser = ""; pauseScreen(); break;
-                default: cout << "Invalid choice." << endl; pauseScreen();
-            }
-        } while (choice != 4);
-    }
-
-public:
-    FoodApp() {
-        Database::initializeMenu();
-        menu = Database::loadMenu();
-    }
-
-    void run() {
-        int choice;
-        string user, pass;
-        do {
-            clearScreen();
-            cout << endl << "=== Food Ordering App ===" << endl;
-            cout << "1. Login" << endl;
-            cout << "2. Register" << endl;
-            cout << "3. Exit" << endl;
-            cout << "Choice: ";
-            
-            choice = getIntegerInput();
+            choice = getValidatedInt("Choice: ", 1, 4);
 
             switch (choice) {
                 case 1:
-                    cout << "Username: "; getline(cin, user);
-                    cout << "Password: "; getline(cin, pass);
-                    
+                    addToCart();
+                    break;
+                case 2:
+                    cartPage();
+                    break;
+                case 3:
+                    Database::viewOrderHistory(currentUser);
+                    break;
+                case 4:
+                    cout << "Logging out..." << endl;
+                    pauseScreen();
+                    break;
+            }
+        } while (choice != 4);
+    }
+};
+
+// ============ MAIN APPLICATION ============
+
+class FoodApp {
+private:
+    string currentUser;
+
+public:
+    void run() {
+        int choice;
+        string user, pass;
+
+        do {
+            clearScreen();
+            cout << "===========================================" << endl;
+            cout << "          FOOD ORDERING APP                " << endl;
+            cout << "===========================================" << endl;
+            cout << "1. Login" << endl;
+            cout << "2. Register" << endl;
+            cout << "3. Exit" << endl;
+            cout << "===========================================" << endl;
+
+            choice = getValidatedInt("Choice: ", 1, 3);
+
+            switch (choice) {
+                case 1:
+                    clearScreen();
+                    cout << "=== USER LOGIN ===" << endl;
+                    cout << "Username: "; cin >> user;
+                    cout << "Password: "; cin >> pass;
+
                     if (Database::loginUser(user, pass)) {
                         currentUser = user;
-                        userMenu();
+                        cout << "\n[SUCCESS] Welcome back, " << currentUser << "!" << endl;
+                        FoodDeliverySystem delivery(currentUser);
+                        delivery.showMenu();
                     } else {
-                        cout << "Invalid credentials." << endl;
+                        cout << "\n[ERROR] Invalid credentials." << endl;
                         pauseScreen();
                     }
                     break;
+
                 case 2:
-                    cout << "New Username: "; getline(cin, user);
-                    cout << "New Password: "; getline(cin, pass);
-                    
+                    clearScreen();
+                    cout << "=== USER REGISTRATION ===" << endl;
+                    cout << "New Username: "; cin >> user;
+                    cout << "New Password: "; cin >> pass;
+
                     if (Database::registerUser(user, pass)) {
-                        cout << "Registration successful! You can now log in." << endl;
+                        cout << "\n[SUCCESS] Registration successful! You can now log in." << endl;
                     } else {
-                        cout << "Username invalid or already exists." << endl;
+                        cout << "\n[ERROR] Username already exists." << endl;
                     }
                     pauseScreen();
                     break;
+
                 case 3:
-                    cout << "Exiting app. Goodbye!" << endl;
+                    clearScreen();
+                    cout << "Thank you for using Food Ordering App!" << endl;
                     break;
-                default:
-                    cout << "Invalid choice." << endl;
-                    pauseScreen();
             }
         } while (choice != 3);
     }
 };
 
+// ============ MAIN ============
+
 int main() {
+    Database::initializeMenu();
     FoodApp app;
     app.run();
+
     return 0;
 }
