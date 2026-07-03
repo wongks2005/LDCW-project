@@ -366,34 +366,31 @@ public:
         initializeRestaurants();
     }
 
-    void cartPage() {
-        int choice;
-        do {
-            viewCart();
-            if (cart.empty()) {
+void cartPage() {
+        viewCart();
+        if (cart.empty()) {
+            pauseScreen();
+            return;
+        }
+
+        cout << "\n--- Cart Menu ---" << endl;
+        cout << "1. Checkout" << endl;
+        cout << "2. Clear Cart" << endl;
+        cout << "3. Go Back" << endl;
+        int choice = getValidatedInt("Choice: ", 1, 3);
+
+        switch (choice) {
+            case 1:
+                checkout();
+                break;
+            case 2:
+                cart.clear();
+                cout << "Cart cleared." << endl;
                 pauseScreen();
                 break;
-            }
-            cout << "\n--- Cart Menu ---" << endl;
-            cout << "1. Checkout" << endl;
-            cout << "2. Clear Cart" << endl;
-            cout << "3. Go Back to Main Menu" << endl;
-            choice = getValidatedInt("Choice: ", 1, 3);
-
-            switch (choice) {
-                case 1:
-                    checkout();
-                    if (cart.empty()) choice = 3;
-                    break;
-                case 2:
-                    cart.clear();
-                    cout << "Cart cleared." << endl;
-                    pauseScreen();
-                    break;
-                case 3:
-                    break;
-            }
-        } while (choice != 3);
+            case 3:
+                break;
+        }
     }
 
     void showMenu() {
@@ -488,7 +485,6 @@ public:
                 case 3:
                     clearScreen();
                     cout << "Thank you for using Food Ordering App!" << endl;
-                    cout << "Your order will be delivered soon! 🚀" << endl;
                     break;
             }
         } while (choice != 3);
