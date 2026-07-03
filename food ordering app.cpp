@@ -60,9 +60,9 @@ class Database {
 public:
     // Generates a structured relational csv flat-file database
     static void initializeMenu() {
-        ifstream file("menu2.txt");
+        ifstream file("menu.txt");
         if (!file.is_open()) {
-            ofstream newFile("menu2.txt");
+            ofstream newFile("menu.txt");
             // Format: RestaurantID,RestaurantName,Cuisine,ItemID,ItemName,Price
             newFile << "1,McDonald's,Fast Food,1,Big Mac,18.50\n";
             newFile << "1,McDonald's,Fast Food,2,McChicken,12.00\n";
@@ -96,7 +96,7 @@ public:
     // Dynamically builds the objects by parsing the database text file line-by-line
     static vector<Restaurant> loadRestaurants() {
         vector<Restaurant> lists;
-        ifstream file("menu2.txt");
+        ifstream file("menu.txt");
         string line;
 
         while (getline(file, line)) {
